@@ -16,11 +16,11 @@ CREATE TABLE weapons (
 );
 
 INSERT INTO weapons (weapon) VALUES
-  ('L''etranger'), ('Stock Knife'), ('Stock Watch'),
-  ('Panic Attack'), ('Stock Pistol'), ('Gunslinger'),
-  ('The Bootlegger'), ('Chargin'' targe'), ('The Half-Zatoichi'),
-  ('Stock Scatter Gun'), ('Pretty Boy''s Pocket Pistol'), ('Wrap Assassin'),
-  ('Tomislav'), ('The Second Banana'), ('Stock Fists'),
+  ('L''etranger'), ('Stock Watch'), ('Stock Knife'), 
+  ('Panic Attack'), ('Stock Pistol'), ('Gunslinger'), 
+  ('The Bootlegger'), ('Chargin'' targe'), ('The Half-Zatoichi'), 
+  ('Stock Scatter Gun'), ('Pretty Boy''s Pocket Pistol'), ('Wrap Assassin'), 
+  ('Tomislav'), ('The Second Banana'), ('Stock Fists'), 
   ('Crusader''s Crossbow'), ('The Quick Fix'), ('The Ubersaw')
 ;
 
@@ -39,19 +39,18 @@ INSERT INTO classes (class) VALUES
 CREATE TABLE loadout (
   id serial,
   class_id integer,
-  primary_weapon_id integer,
-  secondary_weapon_id integer,
-  melee_id integer,
-  CONSTRAINT fk_primary_weapon_id FOREIGN KEY(primary_weapon_id) REFERENCES weapons(id),
-  CONSTRAINT fk_secondary_weapon_id FOREIGN KEY(secondary_weapon_id) REFERENCES weapons(id),
-  CONSTRAINT fk_melee_weapon_id FOREIGN KEY(melee_id) REFERENCES weapons(id),
+  weapon_id integer,
+  CONSTRAINT fk_weapon_id FOREIGN KEY(weapon_id) REFERENCES weapons(id).
   PRIMARY KEY (id)
 );
 
 INSERT INTO loadout (class_id, primary_weapon_id, secondary_weapon_id, melee_id) VALUES
-  (9, 1, 3, 2), (6, 4, 5, 6), (4, 7, 8, 9), 
-  (1, 10, 11, 12), (5, 13, 14, 15), (7, 16, 17, 18)
-  
+  (9, 1), (9, 2), (9, 3), 
+  (6, 4), (6, 5), (6, 6), 
+  (4, 7), (4, 8), (4, 9), 
+  (1, 10), (1, 11), (1, 12), 
+  (5, 13), (5, 14), (5, 15), 
+  (7, 16), (7, 17), (7, 18)
 ;
 
 CREATE TABLE gamemodes (
@@ -75,3 +74,27 @@ CREATE TABLE maps (
 INSERT INTO maps (map, gamemode_id) VALUES
 ('Harvest', 1), ('Thunder Mountain', 2)
 ;
+
+CREATE TABLE statistics (
+  id serial,
+  kills integer,
+  deaths integer,
+  assists integer,
+  backstabs integer,
+  damage integer,
+  healing integer,
+  support integer,
+  ubers integer,
+  destruction integer,
+  captures integer,
+  defenses integer,
+  dominations integer,
+  revenges integer,
+  bonus integer,
+  points integer,
+  wins integer,
+  rounds integer,
+  PRIMARY KEY (id)
+);
+
+INSERT 
