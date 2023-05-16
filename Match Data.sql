@@ -115,3 +115,21 @@ INSERT INTO statistics (kills, deaths, assists, backstabs, damage, healing, supp
   (15, 9, 4, 0, 4596, 0, 0, 0, 0, 2, 0, 0, 0, 0, 28), (2, 1, 7, 0, 394, 5335, 0, 0, 0, 0, 0, 0, 0, 0, 15),
   (5, 16, 3, 0, 1933, 0, 1250, 0, 0, 0, 0, 0, 0, 5, 14), (0, 10, 12, 0, 428, 5500, 0, 6, 0, 0, 0, 0, 0, 0, 14)
 ;
+
+CREATE TABLE match (
+  session_id integer,
+  map_id integer,
+  loadout_id integer,
+  statistics_id integer,
+  wins integer,
+  rounds integer,
+  match integer,
+  CONSTRAINT fk_session_id FOREIGN KEY(session_id) REFERENCES game_session(id),
+  CONSTRAINT fk_map_id FOREIGN KEY(map_id) REFERENCES maps(id),
+  CONSTRAINT fk_loadout_id FOREIGN KEY(loadout_id) REFERENCES loadout(id),
+  CONSTRAINT fk_statistics_id FOREIGN KEY(statistics_id) REFERENCES statistics(id)
+);
+
+#INSERT INTO match (session_id, map_id, loadout_id, statistics_id, wins, rounds, match) VALUES
+#  (1, 1, 1, 1, 2, 3, 1), (2, 1, )
+#;
