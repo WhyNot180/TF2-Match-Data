@@ -6,7 +6,8 @@ CREATE TABLE game_session (
 );
 
 INSERT INTO game_session (day, username) VALUES 
-('2023-05-14', 'Whynot180'), ('2023-05-14', 'Domlightning')
+  ('2023-05-14', 'Whynot180'), ('2023-05-14', 'Domlightning'),
+  ('2023-05-15', 'Whynot180'), ('2023-05-15', 'Domlightning')
 ;
 
 CREATE TABLE weapons (
@@ -82,7 +83,8 @@ CREATE TABLE maps (
 );
 
 INSERT INTO maps (map, gamemode_id) VALUES
-('Harvest', 1), ('Thunder Mountain', 2)
+  ('Harvest', 1), ('Thunder Mountain', 2), ('Bread Space', 2), 
+  ('Borneo', 2)
 ;
 
 CREATE TABLE statistics (
