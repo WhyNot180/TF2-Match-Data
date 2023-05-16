@@ -104,9 +104,14 @@ CREATE TABLE statistics (
   revenges integer,
   bonus integer,
   points integer,
-  wins integer,
-  rounds integer,
   PRIMARY KEY (id)
 );
 
-INSERT 
+INSERT INTO statistics (kills, deaths, assists, backstabs, damage, healing, support, ubers, destruction, 
+                        captures, defenses, dominations, revenges, bonus, points) VALUES
+  (5, 11, 1, 3, 1002, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9), (32, 17, 16, 0, 7249, 818, 0, 0, 0, 2, 2, 3, 0, 0, 48),
+  (19, 15, 4, 0, 2479, 0, 0, 0, 2, 2, 1, 1, 1, 0, 32), (30, 18, 5, 0, 5767, 77, 0, 0, 1, 4, 4, 4, 1, 0, 54),
+  (27, 40, 27, 0, 11397, 530, 2525, 0, 13, 13, 4, 3, 4, 9, 114), (6, 29, 27, 0, 1515, 35300, 0, 21, 0, 6, 3, 1, 2, 0, 117),
+  (15, 9, 4, 0, 4596, 0, 0, 0, 0, 2, 0, 0, 0, 0, 28), (2, 1, 7, 0, 394, 5335, 0, 0, 0, 0, 0, 0, 0, 0, 15),
+  (5, 16, 3, 0, 1933, 0, 1250, 0, 0, 0, 0, 0, 0, 5, 14), (0, 10, 12, 0, 428, 5500, 0, 6, 0, 0, 0, 0, 0, 0, 14)
+;
