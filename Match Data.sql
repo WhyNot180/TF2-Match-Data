@@ -10,18 +10,27 @@ INSERT INTO game_session (day, username) VALUES
 ;
 
 CREATE TABLE weapons (
-  id serial,
-  weapon varchar,
-  PRIMARY KEY (id)
+  weapon varchar
 );
 
-INSERT INTO weapons (weapon) VALUES
-  ('L''etranger'), ('Stock Watch'), ('Stock Knife'), 
-  ('Panic Attack'), ('Stock Pistol'), ('Gunslinger'), 
-  ('The Bootlegger'), ('Chargin'' targe'), ('The Half-Zatoichi'), 
-  ('Stock Scatter Gun'), ('Pretty Boy''s Pocket Pistol'), ('Wrap Assassin'), 
-  ('Tomislav'), ('The Second Banana'), ('Stock Fists'), 
-  ('Crusader''s Crossbow'), ('The Quick Fix'), ('The Ubersaw')
+CREATE TABLE primary_weapons (id serial, PRIMARY KEY (id)) INHERITS (weapons);
+CREATE TABLE secondary_weapons (id serial, PRIMARY KEY (id)) INHERITS (weapons);
+CREATE TABLE melee_weapons (id serial, PRIMARY KEY (id)) INHERITS (weapons);
+
+INSERT INTO primary_weapons (weapon) VALUES
+  ('L''etranger'), ('Panic Attack'), ('The Bootlegger'),
+  ('Stock Scatter Gun'), ('Tomislav'), ('Crusader''s Crossbow'), 
+  ('Stock Rocket Launcher'), ('The Degreaser')
+;
+INSERT INTO secondary_weapons (weapon) VALUES
+  ('Stock Watch'), ('Stock Pistol'), ('Chargin'' targe'), 
+  ('Pretty Boy''s Pocket Pistol'), ('The Second Banana'), ('The Quick Fix'), 
+  ('The Detonator'), ('Panic Attack')
+;
+INSERT INTO melee_weapons (weapon) VALUES
+  ('Stock Knife'), ('Gunslinger'), ('The Half-Zatoichi'), 
+  ('Wrap Assassin'), ('Stock Fists'), ('The Ubersaw'),
+  ('Disciplinary Action'), ('The Powerjack')
 ;
 
 CREATE TABLE classes (
@@ -39,18 +48,19 @@ INSERT INTO classes (class) VALUES
 CREATE TABLE loadout (
   id serial,
   class_id integer,
-  weapon_id integer,
-  CONSTRAINT fk_weapon_id FOREIGN KEY(weapon_id) REFERENCES weapons(id).
+  primary_weapon_id integer,
+  secondary_weapon_id integer,
+  melee_weapon_id integer,
+  CONSTRAINT fk_primary_weapon_id FOREIGN KEY(primary_weapon_id) REFERENCES primary_weapons(id),
+  CONSTRAINT fk_secondary_weapon_id FOREIGN KEY(secondary_weapon_id) REFERENCES secondary_weapons(id),
+  CONSTRAINT fk_melee_weapon_id FOREIGN KEY(melee_weapon_id) REFERENCES melee_weapons(id),
   PRIMARY KEY (id)
 );
 
-INSERT INTO loadout (class_id, primary_weapon_id, secondary_weapon_id, melee_id) VALUES
-  (9, 1), (9, 2), (9, 3), 
-  (6, 4), (6, 5), (6, 6), 
-  (4, 7), (4, 8), (4, 9), 
-  (1, 10), (1, 11), (1, 12), 
-  (5, 13), (5, 14), (5, 15), 
-  (7, 16), (7, 17), (7, 18)
+INSERT INTO loadout (class_id, primary_weapon_id, secondary_weapon_id, melee_weapon_id) VALUES
+  (9, 1, 1, 1), (6, 2, 2, 2), (4, 3, 3, 3), 
+  (1, 4, 4, 4), (5, 5, 5, 5), (7, 6, 6, 6), 
+  (2, 7, 8, 7), (3, 8, 7, 8)
 ;
 
 CREATE TABLE gamemodes (
