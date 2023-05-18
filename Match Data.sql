@@ -92,11 +92,11 @@ CREATE TABLE statistics (
   kills integer,
   deaths integer,
   assists integer,
-  backstabs integer,
+  backstabs integer DEFAULT 0,
   damage integer,
   healing integer,
   support integer,
-  ubers integer,
+  ubers integer DEFAULT 0,
   destruction integer,
   captures integer,
   defenses integer,
@@ -136,7 +136,7 @@ CREATE TABLE match_statistics (
   CONSTRAINT fk_statistics_id FOREIGN KEY(statistics_id) REFERENCES statistics(id),
   CONSTRAINT fk_match_id FOREIGN KEY(match_id) REFERENCES match(id),
   PRIMARY KEY (id)
-)
+);
 
 INSERT INTO match_statistics (match_id, statistics_id) VALUES
   (1, 1), (1, 2), (2, 3), 
@@ -164,4 +164,26 @@ INSERT INTO session_data (session_id, map_id, loadout_id, match_statistics_id) V
   (1, 2, 5, 5), (2, 2, 6, 6), 
   (3, 3, 7, 7), (4, 3, 6, 8),
   (3, 4, 8, 9), (4, 4, 6, 10)
+;
+
+# Very unlikely for someone to ever want ALL of this in one query
+# Should only ever be used when filtering or aggregating many kinds of data
+CREATE VIEW joined_session_data AS
+  select game_session.username, game_session.day, maps.map, gamemodes.gamemode, classes.class, 
+  primary_weapons.weapon as primary_weapon, secondary_weapons.weapon as secondary_weapon, melee_weapons.weapon as melee_weapon,
+  match.match, match.rounds, match.wins, 
+  statistics.kills, statistics.deaths, statistics.assists, statistics.backstabs, statistics.damage, 
+  statistics.healing, statistics.support, statistics.ubers, statistics.destruction, statistics.captures, 
+  statistics.defenses, statistics.dominations, statistics.revenges, statistics.bonus, statistics.points from session_data
+  join game_session on game_session.id = session_data.session_id
+  join maps on maps.id = session_data.session_id
+    join gamemodes on maps.gamemode_id = gamemodes.id
+  join loadout on loadout.id = session_data.loadout_id
+    join classes on loadout.class_id = classes.id
+    join primary_weapons on loadout.primary_weapon_id = primary_weapons.id
+    join secondary_weapons on loadout.secondary_weapon_id = secondary_weapons.id
+    join melee_weapons on loadout.melee_weapon_id = melee_weapons.id
+  join match_statistics on match_statistics.id = session_data.match_statistics_id
+    join match on match_statistics.match_id = match.id
+    join statistics on match_statistics.statistics_id = statistics.id
 ;
