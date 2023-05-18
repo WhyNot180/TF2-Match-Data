@@ -116,26 +116,52 @@ INSERT INTO statistics (kills, deaths, assists, backstabs, damage, healing, supp
   (5, 16, 3, 0, 1933, 0, 1250, 0, 0, 0, 0, 0, 0, 5, 14), (0, 10, 12, 0, 428, 5500, 0, 6, 0, 0, 0, 0, 0, 0, 14)
 ;
 
+CREATE TABLE match (
+  id serial,
+  match integer,
+  wins integer,
+  rounds integer,
+  PRIMARY KEY (id)
+);
+
+INSERT INTO match (match, wins, rounds) VALUES
+  (1, 2, 3), (2, 1, 3), (3, 2, 1),
+  (1, 2, 2), (2, 0, 2)
+;
+
+CREATE TABLE match_statistics (
+  id serial,
+  match_id integer,
+  statistics_id integer,
+  CONSTRAINT fk_statistics_id FOREIGN KEY(statistics_id) REFERENCES statistics(id),
+  CONSTRAINT fk_match_id FOREIGN KEY(match_id) REFERENCES match(id),
+  PRIMARY KEY (id)
+)
+
+INSERT INTO match_statistics (match_id, statistics_id) VALUES
+  (1, 1), (1, 2), (2, 3), 
+  (2, 4), (3, 5), (3, 6), 
+  (1, 7), (1, 8), (2, 9), 
+  (2, 10)
+;
+
 # Need to make a seperate match table for the wins, rounds, and match number
 # Also need a table to combine statistics and previous table
-CREATE TABLE match (
+CREATE TABLE session_data (
   session_id integer,
   map_id integer,
   loadout_id integer,
-  statistics_id integer,
-  wins integer,
-  rounds integer,
-  match integer,
+  match_statistics_id integer,
   CONSTRAINT fk_session_id FOREIGN KEY(session_id) REFERENCES game_session(id),
   CONSTRAINT fk_map_id FOREIGN KEY(map_id) REFERENCES maps(id),
   CONSTRAINT fk_loadout_id FOREIGN KEY(loadout_id) REFERENCES loadout(id),
-  CONSTRAINT fk_statistics_id FOREIGN KEY(statistics_id) REFERENCES statistics(id)
+  CONSTRAINT fk_match_statistics_id FOREIGN KEY(match_statistics_id) REFERENCES match_statistics(id)
 );
 
-INSERT INTO match (session_id, map_id, loadout_id, statistics_id, wins, rounds, match) VALUES
-  (1, 1, 1, 1, 2, 3, 1), (2, 1, 2, 2, 2, 3, 1), 
-  (1, 1, 3, 3, 1, 3, 2), (2, 1, 4, 4, 1, 3, 2), 
-  (1, 2, 5, 5, 1, 2, 3), (2, 2, 6, 6, 1, 2, 3), 
-  (3, 3, 7, 7, 2, 2, 1), (4, 3, 6, 8, 2, 2, 1),
-  (3, 4, 8, 9, 0, 2, 2), (4, 4, 6, 10, 0, 2, 2)
+INSERT INTO session_data (session_id, map_id, loadout_id, match_statistics_id) VALUES
+  (1, 1, 1, 1), (2, 1, 2, 2), 
+  (1, 1, 3, 3), (2, 1, 4, 4), 
+  (1, 2, 5, 5), (2, 2, 6, 6), 
+  (3, 3, 7, 7), (4, 3, 6, 8),
+  (3, 4, 8, 9), (4, 4, 6, 10)
 ;
