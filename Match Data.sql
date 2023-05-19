@@ -136,7 +136,7 @@ CREATE TABLE match (
 );
 
 INSERT INTO match (match, wins, rounds) VALUES
-  (1, 2, 3), (2, 1, 3), (3, 2, 1),
+  (1, 2, 3), (2, 1, 3), (3, 1, 2),
   (1, 2, 2), (2, 0, 2)
 ;
 
@@ -152,8 +152,8 @@ CREATE TABLE match_statistics (
 INSERT INTO match_statistics (match_id, statistics_id) VALUES
   (1, 1), (1, 2), (2, 3), 
   (2, 4), (3, 5), (3, 6), 
-  (1, 7), (1, 8), (2, 9), 
-  (2, 10)
+  (4, 7), (4, 8), (5, 9), 
+  (5, 10)
 ;
 
 # Need to make a seperate match table for the wins, rounds, and match number
@@ -175,7 +175,7 @@ INSERT INTO session_data (session_id, map_id, loadout_id, match_statistics_id) V
   (1, 2, 5, 5), (2, 2, 6, 6), 
   (3, 3, 7, 7), (4, 3, 6, 8),
   (3, 4, 8, 9), (4, 4, 6, 10)
-;
+;   
 
 # Very unlikely for someone to ever want ALL of this in one query
 # Should only ever be used when filtering or aggregating many kinds of data
@@ -201,5 +201,16 @@ CREATE VIEW joined_session_data AS
 ;
 
 # Queries
-select day, AVG(kills), SUM(rounds) from joined_session_data
+
+# Shows the weighted average kills per day based on total rounds played that day
+# Can be used to show the general physical performance (reaction time, aim, etc.) of people on one day
+# It uses a weighted average because each match may have a different amount of rounds, and the more there are the more kills that are possible
+select day, SUM(kills * rounds) / SUM(rounds) as w_avg_kills from joined_session_data
 group by day
+order by w_avg_kills desc;
+
+# Shows the weighted average points of each player
+# Points show general performance and this can therefore be used to show the relative performance of players (although this is not perfect and some matches may include different levels of skills in the enemy and ally team)
+select username, SUM(points * rounds) / SUM(rounds) as w_avg_points from joined_session_data
+group by username
+order by w_avg_points desc;
