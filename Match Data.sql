@@ -199,3 +199,7 @@ CREATE VIEW joined_session_data AS
     join match on match_statistics.match_id = match.id
     join statistics on match_statistics.statistics_id = statistics.id
 ;
+
+# Queries
+select day, AVG(kills), SUM(rounds) from joined_session_data
+group by day
