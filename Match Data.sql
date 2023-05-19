@@ -1,13 +1,24 @@
-CREATE TABLE game_session (
+CREATE TABLE usernames (
   id serial,
-  day date,
   username varchar,
   PRIMARY KEY (id)
 );
 
-INSERT INTO game_session (day, username) VALUES 
-  ('2023-05-14', 'Whynot180'), ('2023-05-14', 'Domlightning'),
-  ('2023-05-15', 'Whynot180'), ('2023-05-15', 'Domlightning')
+INSERT INTO usernames (username) VALUES
+  ('Whynot180'), ('Domlightning')
+;
+
+CREATE TABLE sessions (
+  id serial,
+  day date,
+  username_id integer,
+  CONSTRAINT fk_username_id FOREIGN KEY (username_id) REFERENCES usernames(id),
+  PRIMARY KEY (id)
+);
+
+INSERT INTO sessions (day, username_id) VALUES 
+  ('2023-05-14', 1), ('2023-05-14', 2),
+  ('2023-05-15', 1), ('2023-05-15', 2)
 ;
 
 CREATE TABLE weapons (
@@ -152,7 +163,7 @@ CREATE TABLE session_data (
   map_id integer,
   loadout_id integer,
   match_statistics_id integer,
-  CONSTRAINT fk_session_id FOREIGN KEY(session_id) REFERENCES game_session(id),
+  CONSTRAINT fk_session_id FOREIGN KEY(session_id) REFERENCES sessions(id),
   CONSTRAINT fk_map_id FOREIGN KEY(map_id) REFERENCES maps(id),
   CONSTRAINT fk_loadout_id FOREIGN KEY(loadout_id) REFERENCES loadout(id),
   CONSTRAINT fk_match_statistics_id FOREIGN KEY(match_statistics_id) REFERENCES match_statistics(id)
@@ -169,13 +180,14 @@ INSERT INTO session_data (session_id, map_id, loadout_id, match_statistics_id) V
 # Very unlikely for someone to ever want ALL of this in one query
 # Should only ever be used when filtering or aggregating many kinds of data
 CREATE VIEW joined_session_data AS
-  select game_session.username, game_session.day, maps.map, gamemodes.gamemode, classes.class, 
+  select usernames.username, sessions.day, maps.map, gamemodes.gamemode, classes.class, 
   primary_weapons.weapon as primary_weapon, secondary_weapons.weapon as secondary_weapon, melee_weapons.weapon as melee_weapon,
   match.match, match.rounds, match.wins, 
   statistics.kills, statistics.deaths, statistics.assists, statistics.backstabs, statistics.damage, 
   statistics.healing, statistics.support, statistics.ubers, statistics.destruction, statistics.captures, 
   statistics.defenses, statistics.dominations, statistics.revenges, statistics.bonus, statistics.points from session_data
-  join game_session on game_session.id = session_data.session_id
+  join sessions on sessions.id = session_data.session_id
+    join usernames on sessions.username_id = usernames.id
   join maps on maps.id = session_data.session_id
     join gamemodes on maps.gamemode_id = gamemodes.id
   join loadout on loadout.id = session_data.loadout_id
