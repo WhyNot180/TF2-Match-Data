@@ -175,7 +175,39 @@ INSERT INTO session_data (session_id, map_id, loadout_id, match_statistics_id) V
   (1, 2, 5, 5), (2, 2, 6, 6), 
   (3, 3, 7, 7), (4, 3, 6, 8),
   (3, 4, 8, 9), (4, 4, 6, 10)
-;   
+;
+
+CREATE FUNCTION weighted_avg_accum(
+  "Previous" numeric[],
+  "ThisData" numeric,
+  "ThisWeight" numeric)
+  RETURNS numeric[] 
+  LANGUAGE plpgsql
+  AS '
+    BEGIN
+      RETURN ARRAY["Previous"[1] + ("ThisData" * "ThisWeight"), "Previous"[2] + "ThisWeight"];
+    END;
+  '
+;
+
+CREATE FUNCTION weighted_avg_final(
+  "Weight_and_avg" numeric[])
+  RETURNS numeric
+  LANGUAGE plpgsql
+  AS '
+    BEGIN
+      RETURN "Weight_and_avg"[1] / "Weight_and_avg"[2];
+    END;
+  '
+;
+
+CREATE AGGREGATE weighted_avg(data numeric, weight numeric) (
+  INITCOND = '{0,0}',
+  SFUNC = weighted_avg_accum,
+  STYPE = numeric[],
+  FINALFUNC = weighted_avg_final,
+  FINALFUNC_MODIFY = READ_ONLY
+);
 
 # Very unlikely for someone to ever want ALL of this in one query
 # Should only ever be used when filtering or aggregating many kinds of data
@@ -205,12 +237,12 @@ CREATE VIEW joined_session_data AS
 # Shows the weighted average kills per day based on total rounds played that day
 # Can be used to show the general physical performance (reaction time, aim, etc.) of people on one day
 # It uses a weighted average because each match may have a different amount of rounds, and the more there are the more kills that are possible
-select day, SUM(kills * rounds) / SUM(rounds) as w_avg_kills from joined_session_data
+select day, weighted_avg(kills, rounds) as w_avg_kills from joined_session_data
 group by day
 order by w_avg_kills desc;
 
 # Shows the weighted average points of each player
 # Points show general performance and this can therefore be used to show the relative performance of players (although this is not perfect and some matches may include different levels of skills in the enemy and ally team)
-select username, SUM(points * rounds) / SUM(rounds) as w_avg_points from joined_session_data
+select username, weighted_avg(points, rounds) as w_avg_points from joined_session_data
 group by username
 order by w_avg_points desc;
