@@ -173,8 +173,6 @@ INSERT INTO match_statistics (match_id, statistics_id) VALUES
   (7, 13)
 ;
 
-# Need to make a seperate match table for the wins, rounds, and match number
-# Also need a table to combine statistics and previous table
 CREATE TABLE session_data (
   session_id integer,
   map_id integer,
@@ -196,6 +194,7 @@ INSERT INTO session_data (session_id, map_id, loadout_id, match_statistics_id) V
   (5, 1, 2, 13)
 ;
 
+# To be used with weighted_avg aggregate function
 CREATE FUNCTION weighted_avg_accum(
   "Previous" numeric[],
   "Thisdata" numeric,
@@ -251,6 +250,7 @@ CREATE VIEW joined_session_data AS
     join statistics on match_statistics.statistics_id = statistics.id
 ;
 
+# This is annoying, but I feel like making functions to make it slightly better would end up being even more annoying seeing as each table has different column names
 CREATE FUNCTION maintain_integrity()
   RETURNS TRIGGER
   LANGUAGE plpgsql
@@ -346,6 +346,7 @@ CREATE FUNCTION maintain_integrity()
   '
 ;
 
+# This makes it *so* much easier to actually insert data; no need to deal with a million ids
 CREATE TRIGGER insert_session_data
   INSTEAD OF INSERT
   ON joined_session_data
@@ -353,6 +354,7 @@ CREATE TRIGGER insert_session_data
   EXECUTE PROCEDURE maintain_integrity()
 ;
 
+# This looks ugly, but its probably the easiest way to actually insert new data without dealing with ids
 INSERT INTO joined_session_data (username, day, gamemode, map, class, primary_weapon, secondary_weapon, melee_weapon, match, wins, rounds, kills, deaths, assists, backstabs, damage, healing, support, ubers, destruction, captures, defenses, dominations, revenges, bonus, points) VALUES 
   ('XyrusgamerPlays', '2023-05-20', 'Attack/Defend', 'Mercenary Park', 'Scout', 'Baby Face''s Blaster', 'Winger', 'Candy Cane', 1, 3, 3, 11, 6, 6, 0, 1945, 0, 0, 0, 1, 0, 1, 0, 0, 0, 19),
   ('XyrusgamerPlays', '2023-05-20', 'Attack/Defend', 'Mercenary Park', 'Engineer', 'Stock Shotgun', 'The Wrangler', 'The Jag', 2, 0, 1, 10, 5, 0, 0, 2447, 325, 0, 0, 0, 0, 0, 0, 0, 0, 18),
