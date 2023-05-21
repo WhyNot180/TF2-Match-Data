@@ -228,26 +228,26 @@ CREATE AGGREGATE weighted_avg(data numeric, weight numeric) (
 );
 
 # Very unlikely for someone to ever want ALL of this in one query
-# Should only ever be used when filtering or aggregating many kinds of data
+# Should only ever be used when filtering or aggregating many kinds of data that dont fit together otherwise
 CREATE VIEW joined_session_data AS
-  select usernames.username, sessions.day, maps.map, gamemodes.gamemode, classes.class, 
-  primary_weapons.weapon as primary_weapon, secondary_weapons.weapon as secondary_weapon, melee_weapons.weapon as melee_weapon,
+  SELECT usernames.username, sessions.day, maps.map, gamemodes.gamemode, classes.class, 
+  primary_weapons.weapon AS primary_weapon, secondary_weapons.weapon AS secondary_weapon, melee_weapons.weapon AS melee_weapon,
   match.match, match.rounds, match.wins, 
   statistics.kills, statistics.deaths, statistics.assists, statistics.backstabs, statistics.damage, 
   statistics.healing, statistics.support, statistics.ubers, statistics.destruction, statistics.captures, 
-  statistics.defenses, statistics.dominations, statistics.revenges, statistics.bonus, statistics.points from session_data
-  join sessions on sessions.id = session_data.session_id
-    join usernames on sessions.username_id = usernames.id
-  join maps on maps.id = session_data.map_id
-    join gamemodes on maps.gamemode_id = gamemodes.id
-  join loadout on loadout.id = session_data.loadout_id
-    join classes on loadout.class_id = classes.id
-    join primary_weapons on loadout.primary_weapon_id = primary_weapons.id
-    join secondary_weapons on loadout.secondary_weapon_id = secondary_weapons.id
-    join melee_weapons on loadout.melee_weapon_id = melee_weapons.id
-  join match_statistics on match_statistics.id = session_data.match_statistics_id
-    join match on match_statistics.match_id = match.id
-    join statistics on match_statistics.statistics_id = statistics.id
+  statistics.defenses, statistics.dominations, statistics.revenges, statistics.bonus, statistics.points FROM session_data
+  JOIN sessions ON sessions.id = session_data.session_id
+    JOIN usernames ON sessions.username_id = usernames.id
+  JOIN maps ON maps.id = session_data.map_id
+    JOIN gamemodes ON maps.gamemode_id = gamemodes.id
+  JOIN loadout ON loadout.id = session_data.loadout_id
+    JOIN classes ON loadout.class_id = classes.id
+    JOIN primary_weapons ON loadout.primary_weapon_id = primary_weapons.id
+    JOIN secondary_weapons ON loadout.secondary_weapon_id = secondary_weapons.id
+    JOIN melee_weapons ON loadout.melee_weapon_id = melee_weapons.id
+  JOIN match_statistics ON match_statistics.id = session_data.match_statistics_id
+    JOIN match ON match_statistics.match_id = match.id
+    JOIN statistics ON match_statistics.statistics_id = statistics.id
 ;
 
 # This is annoying, but I feel like making functions to make it slightly better would end up being even more annoying seeing as each table has different column names
@@ -389,9 +389,9 @@ INSERT INTO joined_session_data (username, day, gamemode, map, class, primary_we
   overall performance of a player (although this is not perfect and some matches 
   may include different levels of skills in the enemy and ally team)
 */
-select username, weighted_avg(points, (1/rounds::NUMERIC)) as w_avg_points from joined_session_data
-group by username
-order by w_avg_points desc;
+SELECT username, weighted_avg(points, (1/rounds::numeric)) AS w_avg_points FROM joined_session_data
+GROUP BY username
+ORDER BY w_avg_points DESC;
 
 # Shows the overall performance throughout a session
 # Uses weighted avg to show overall performance per match.
@@ -400,15 +400,15 @@ order by w_avg_points desc;
   This can be show how a person improves (or worsens) throughout a session.
   For example, this could be used to show that people might have a sort of "warm up" and improve, or they may become more frustrated and worsen.
 */
-select match.match, weighted_avg(statistics.points, (1/match.rounds::NUMERIC)) as w_avg_points, 
+SELECT match.match, weighted_avg(statistics.points, (1/match.rounds::NUMERIC)) AS w_avg_points, 
 sqrt(sum(power(statistics.points - (
-  select weighted_avg(statistics.points, (1/match.rounds::NUMERIC)) from match_statistics
-  join match on match_statistics.match_id = match.id
-  join statistics on match_statistics.statistics_id = statistics.id), 2))/count(statistics.points)) as stddev from match_statistics
-join match on match_statistics.match_id = match.id
-join statistics on match_statistics.statistics_id = statistics.id
-group by match
-order by match asc;
+  SELECT weighted_avg(statistics.points, (1/match.rounds::numeric)) FROM match_statistics
+  JOIN match ON match_statistics.match_id = match.id
+  JOIN statistics ON match_statistics.statistics_id = statistics.id), 2))/count(statistics.points)) AS stddev FROM match_statistics
+JOIN match ON match_statistics.match_id = match.id
+JOIN statistics ON match_statistics.statistics_id = statistics.id
+GROUP BY match
+ORDER BY match ASC;
 
 # Shows the weighted average kills per primary weapon of the scout
 /*
@@ -418,11 +418,11 @@ order by match asc;
   like one might do in Mann vs. Machine mode where hoardes of enemies and "boss" 
   enemies with large hp pools are involved.
 */
-select primary_weapon, weighted_avg(damage, (1/rounds::NUMERIC)) as w_avg_damage 
-from joined_session_data
-where class = 'Scout'
-group by primary_weapon
-order by w_avg_damage desc;
+SELECT primary_weapon, weighted_avg(damage, (1/rounds::NUMERIC)) AS w_avg_damage 
+FROM joined_session_data
+WHERE class = 'Scout'
+GROUP BY primary_weapon
+ORDER BY w_avg_damage DESC;
 
 # Shows the most played class per player
 /*
@@ -430,5 +430,5 @@ order by w_avg_damage desc;
   make assumptions on other statistics, such as how playing medic the most would 
   result in a much higher healing stat than other players.
 */
-select username, mode() within group (order by class) as most_played_class from joined_session_data
-group by username;
+SELECT username, mode() WITHIN GROUP (ORDER BY class) AS most_played_class FROM joined_session_data
+GROUP BY username;
