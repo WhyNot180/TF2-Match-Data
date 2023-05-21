@@ -32,7 +32,7 @@ CREATE TABLE melee_weapons (id serial, PRIMARY KEY (id)) INHERITS (weapons);
 
 INSERT INTO primary_weapons (weapon) VALUES
   ('L''etranger'), ('Panic Attack'), ('The Bootlegger'),
-  ('Stock Scatter Gun'), ('Tomislav'), ('Crusader''s Crossbow'), 
+  ('Stock Scattergun'), ('Tomislav'), ('Crusader''s Crossbow'), 
   ('Stock Rocket Launcher'), ('The Degreaser')
 ;
 INSERT INTO secondary_weapons (weapon) VALUES
@@ -43,7 +43,7 @@ INSERT INTO secondary_weapons (weapon) VALUES
 INSERT INTO melee_weapons (weapon) VALUES
   ('Stock Knife'), ('Gunslinger'), ('The Half-Zatoichi'), 
   ('Wrap Assassin'), ('Stock Fists'), ('The Ubersaw'),
-  ('Disciplinary Action'), ('The Powerjack')
+  ('The Disciplinary Action'), ('The Powerjack')
 ;
 
 CREATE TABLE classes (
@@ -237,6 +237,134 @@ CREATE VIEW joined_session_data AS
   join match_statistics on match_statistics.id = session_data.match_statistics_id
     join match on match_statistics.match_id = match.id
     join statistics on match_statistics.statistics_id = statistics.id
+;
+
+CREATE FUNCTION maintain_integrity()
+  RETURNS TRIGGER
+  LANGUAGE plpgsql
+  AS
+  '
+    DECLARE
+      id_username integer;
+      id_session integer;
+      id_gamemode integer;
+      id_map integer;
+      id_primary_weapon integer;
+      id_secondary_weapon integer;
+      id_melee_weapon integer;
+      id_class integer;
+      id_loadout integer;
+      id_statistics integer;
+      id_match integer;
+      id_match_statistics integer;
+    BEGIN 
+      IF NOT EXISTS (SELECT FROM usernames WHERE username LIKE NEW.username) THEN
+        INSERT INTO usernames (username) VALUES (NEW.username);
+      END IF;
+      
+      SELECT id FROM usernames WHERE username LIKE NEW.username INTO id_username;
+      
+      IF NOT EXISTS (SELECT FROM sessions WHERE sessions.username_id = id_username AND sessions.day = NEW.day) THEN
+        INSERT INTO sessions (day, username_id) VALUES (NEW.day, id_username);
+      END IF;
+      
+      SELECT id FROM sessions WHERE username_id = id_username AND sessions.day = NEW.day INTO id_session;
+      
+      IF NOT EXISTS (SELECT FROM gamemodes WHERE gamemode LIKE NEW.gamemode) THEN
+        INSERT INTO gamemodes (gamemode) VALUES (NEW.gamemode);
+      END IF;
+      
+      SELECT id FROM gamemodes WHERE gamemode LIKE NEW.gamemode INTO id_gamemode;
+      
+      IF NOT EXISTS (SELECT FROM maps WHERE map LIKE NEW.map AND gamemode_id = id_gamemode) THEN
+        INSERT INTO maps (map, gamemode_id) VALUES (NEW.map, id_gamemode);
+      END IF;
+      
+      SELECT id FROM maps WHERE map LIKE NEW.map AND gamemode_id = id_gamemode INTO id_map;
+      
+      IF NOT EXISTS (SELECT FROM primary_weapons WHERE weapon LIKE NEW.primary_weapon) THEN
+        INSERT INTO primary_weapons (weapon) VALUES (NEW.primary_weapon);
+      END IF;
+      
+      SELECT id FROM primary_weapons WHERE weapon LIKE NEW.primary_weapon INTO id_primary_weapon;
+      
+      IF NOT EXISTS (SELECT FROM secondary_weapons WHERE weapon LIKE NEW.secondary_weapon) THEN
+        INSERT INTO secondary_weapons (weapon) VALUES (NEW.secondary_weapon);
+      END IF;
+      
+      SELECT id FROM secondary_weapons WHERE weapon LIKE NEW.secondary_weapon INTO id_secondary_weapon;
+      
+      IF NOT EXISTS (SELECT FROM melee_weapons WHERE weapon LIKE NEW.melee_weapon) THEN
+        INSERT INTO melee_weapons (weapon) VALUES (NEW.melee_weapon);
+      END IF;
+      
+      SELECT id FROM melee_weapons WHERE weapon LIKE NEW.melee_weapon INTO id_melee_weapon;
+      
+      SELECT id FROM classes WHERE class LIKE NEW.class INTO id_class;
+      
+      IF NOT EXISTS (SELECT FROM loadout WHERE class_id = id_class AND primary_weapon_id = id_primary_weapon AND secondary_weapon_id = id_secondary_weapon AND melee_weapon_id = id_melee_weapon) THEN
+        INSERT INTO loadout (class_id, primary_weapon_id, secondary_weapon_id, melee_weapon_id) VALUES (id_class, id_primary_weapon, id_secondary_weapon, id_melee_weapon);
+      END IF;
+      
+      SELECT id FROM loadout WHERE class_id = id_class AND primary_weapon_id = id_primary_weapon AND secondary_weapon_id = id_secondary_weapon AND melee_weapon_id = id_melee_weapon INTO id_loadout;
+      
+      INSERT INTO statistics (kills, deaths, assists, backstabs, damage, healing, support, ubers, destruction, 
+                              captures, defenses, dominations, revenges, bonus, points) VALUES
+        (NEW.kills, NEW.deaths, NEW.assists, NEW.backstabs, NEW.damage, NEW.healing, NEW.support, NEW.ubers, NEW.destruction, New.captures, NEW.defenses, NEW.dominations, NEW.revenges, NEW.bonus, NEW.points);
+      
+      SELECT id FROM statistics WHERE kills = NEW.kills AND deaths = NEW.deaths AND assists = NEW.assists AND backstabs = NEW.backstabs AND damage = NEW.damage AND healing = NEW.healing AND support = NEW.support AND ubers = NEW.ubers AND destruction = NEW.destruction AND captures = NEW.captures AND dominations = NEW.dominations AND revenges = NEW.revenges AND bonus = NEW.bonus AND points = NEW.points INTO id_statistics;
+      
+      IF NOT EXISTS (SELECT FROM match WHERE match = NEW.match AND wins = NEW.wins AND rounds = NEW.rounds) THEN
+        INSERT INTO match (match, wins, rounds) VALUES (NEW.match, NEW.wins, NEW.rounds);
+      END IF;
+      
+      SELECT id FROM match WHERE match = NEW.match AND wins = NEW.wins AND rounds = NEW.rounds INTO id_match;
+      
+      IF NOT EXISTS (SELECT FROM match_statistics WHERE match_id = id_match AND statistics_id = id_statistics) THEN
+        INSERT INTO match_statistics (match_id, statistics_id) VALUES (id_match, id_statistics);
+      END IF;
+      
+      SELECT id FROM match_statistics WHERE match_id = id_match AND statistics_id = id_statistics INTO id_match_statistics;
+      
+      IF NOT EXISTS (SELECT FROM session_data WHERE session_id = id_session AND map_id = id_map AND loadout_id = id_loadout AND match_statistics_id = id_match_statistics) THEN
+        INSERT INTO session_data (session_id, map_id, loadout_id, match_statistics_id) VALUES (id_session, id_map, id_loadout, id_match_statistics);
+      END IF;
+      RETURN NEW;
+    END;
+  '
+;
+
+CREATE TRIGGER insert_session_data
+  INSTEAD OF INSERT
+  ON joined_session_data
+  FOR EACH ROW
+  EXECUTE PROCEDURE maintain_integrity()
+;
+
+INSERT INTO joined_session_data (username, day, gamemode, map, class, primary_weapon, secondary_weapon, melee_weapon, match, wins, rounds, kills, deaths, assists, backstabs, damage, healing, support, ubers, destruction, captures, defenses, dominations, revenges, bonus, points) VALUES 
+  ('XyrusgamerPlays', '2023-05-20', 'Attack/Defend', 'Mercenary Park', 'Scout', 'Baby Face''s Blaster', 'Winger', 'Candy Cane', 1, 3, 3, 11, 6, 6, 0, 1945, 0, 0, 0, 1, 0, 1, 0, 0, 0, 19),
+  ('XyrusgamerPlays', '2023-05-20', 'Attack/Defend', 'Mercenary Park', 'Engineer', 'Stock Shotgun', 'The Wrangler', 'The Jag', 2, 0, 1, 10, 5, 0, 0, 2447, 325, 0, 0, 0, 0, 0, 0, 0, 0, 18),
+  ('XyrusgamerPlays', '2023-05-20', 'Attack/Defend', 'Mossrock', 'Soldier', 'The Air Strike', 'The Gunboats', 'The Escape Plan', 3, 0, 2, 2, 9, 0, 0, 1270, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9),
+  ('XyrusgamerPlays', '2023-05-20', 'Payload', 'Gold Rush', 'Sniper', 'The Hitman''s Heatmaker', 'Stock SMG', 'Stock Kukri', 4, 0, 1, 11, 6, 1, 0, 1937, 0, 0, 0, 0, 0, 2, 0, 0, 0, 19),
+  ('XyrusgamerPlays', '2023-05-20', 'Payload', 'Barnblitz', 'Scout', 'The Soda Popper', 'The Flying Guillotine', 'The Boston Basher', 5, 1, 2, 9, 36, 7, 0, 4257, 0, 0, 0, 1, 0, 4, 0, 1, 0, 25),
+  ('XyrusgamerPlays', '2023-05-20', 'Payload', 'Borneo', 'Spy', 'L''etranger', 'Stock Watch', 'The Big Earner', 6, 2, 2, 12, 23, 0, 12, 2490, 0, 0, 0, 1, 0, 2, 0, 0, 0, 31),
+  ('Domlightning', '2023-05-20', 'Attack/Defend', 'Mercenary Park', 'Medic', 'Crusader''s Crossbow', 'The Quick Fix', 'The Ubersaw', 1, 3, 3, 6, 6, 8, 0, 517, 7340, 0, 5, 0, 1, 0, 0, 0, 0, 29),
+  ('Domlightning', '2023-05-20', 'Attack/Defend', 'Mercenary Park', 'Engineer', 'Panic Attack', 'Stock Pistol', 'Gunslinger', 2, 0, 1, 20, 11, 11, 0, 3910, 130, 0, 0, 1, 0, 1, 4, 0, 0, 32),
+  ('Domlightning', '2023-05-20', 'Attack/Defend', 'Mossrock', 'Medic', 'Crusader''s Crossbow', 'The Quick Fix', 'The Ubersaw', 3, 0, 2, 7, 10, 3, 0, 1060, 7520, 0, 3, 0, 0, 0, 0, 0, 0, 24),
+  ('Domlightning', '2023-05-20', 'Payload', 'Gold Rush', 'Engineer', 'Panic Attack', 'Stock Pistol', 'Gunslinger', 4, 0, 1, 11, 8, 9, 0, 2952, 0, 0, 0, 0, 0, 1, 1, 0, 0, 20),
+  ('Domlightning', '2023-05-20', 'Payload', 'Barnblitz', 'Engineer', 'Panic Attack', 'Stock Pistol', 'Gunslinger', 5, 2, 2, 28, 19, 17, 0, 7689, 810, 0, 0, 1, 1, 0, 4, 0, 0, 62),
+  ('Ryry4766', '2023-05-20', 'Attack/Defend', 'Mercenary Park', 'Soldier', 'Beggar''s Bazooka', 'The Concheror', 'The Disciplinary Action', 1, 3, 3, 13, 6, 2, 0, 2057, 0, 277, 0, 1, 2, 2, 0, 0, 0, 24),
+  ('Ryry4766', '2023-05-20', 'Attack/Defend', 'Mercenary Park', 'Engineer', 'Frontier Justice', 'Stock Pistol', 'The Eureka Effect', 2, 0, 1, 9, 5, 0, 0, 2842, 244, 0, 0, 0, 0, 0, 0, 0, 0, 22),
+  ('Ryry4766', '2023-05-20', 'Attack/Defend', 'Mossrock', 'Scout', 'Baby Face''s Blaster', 'The Flying Guillotine', 'The Wrap Assassin', 3, 0, 2, 10, 20, 0, 0, 1708, 0, 0, 0, 0, 0, 1, 0, 1, 0, 14),
+  ('Ryry4766', '2023-05-20', 'Payload', 'Gold Rush', 'Heavy', 'Tomislav', 'The Sandvich', 'The Eviction Notice', 4, 0, 1, 12, 8, 6, 0, 3667, 940, 325, 0, 1, 0, 0, 0, 0, 1, 20),
+  ('Ryry4766', '2023-05-20', 'Payload', 'Barnblitz', 'Medic', 'Crusader''s Crossbow', 'The Quick Fix', 'The Amputator', 5, 2, 2, 0, 17, 33, 0, 110, 32900, 0, 18, 0, 1, 1, 2, 0, 0, 91),
+  ('Ryry4766', '2023-05-20', 'Payload', 'Borneo', 'Sniper', 'The Sydney Sleeper', 'The Cleaner''s Carbine', 'The Bushwacka', 6, 2, 2, 8, 19, 3, 0, 3023, 0, 0, 0, 1, 0, 1, 0, 0, 0, 16),
+  ('Whynot180', '2023-05-20', 'Attack/Defend', 'Mercenary Park', 'Pyro', 'The Degreaser', 'Panic Attack', 'The Powerjack', 1, 3, 3, 14, 9, 7, 0, 2097, 0, 0, 0, 1, 1, 0, 0, 0, 0, 21),
+  ('Whynot180', '2023-05-20', 'Attack/Defend', 'Mercenary Park', 'Engineer', 'Panic Attack', 'The Wrangler', 'The Jag', 2, 0, 1, 9, 9, 4, 0, 1697, 80, 0, 0, 0, 0, 1, 0, 0, 0, 14),
+  ('Whynot180', '2023-05-20', 'Attack/Defend', 'Mossrock', 'Sniper', 'The Huntsman', 'Darwin''s Danger Shield', 'The Shahansha', 3, 0, 2, 4, 14, 2, 0, 2132, 0, 250, 0, 1, 0, 1, 0, 0, 1, 12),
+  ('Whynot180', '2023-05-20', 'Payload', 'Gold Rush', 'Scout', 'Stock Scattergun', 'Winger', 'Stock Bat', 4, 0, 1, 8, 16, 2, 0, 1587, 0, 0, 0, 0, 0, 2, 0, 0, 0, 13),
+  ('Whynot180', '2023-05-20', 'Payload', 'Barnblitz', 'Heavy', 'Tomislav', 'The Second Banana', 'Stock Fists', 5, 2, 2, 27, 30, 10, 0, 8181, 440, 1976, 0, 3, 5, 3, 1, 1, 7, 69),
+  ('Whynot180', '2023-05-20', 'Payload', 'Borneo', 'Demoman', 'The Iron Bomber', 'Stickybomb Launcher', 'Bottle', 6, 2, 2, 16, 23, 5, 0, 4873, 0, 0, 0, 1, 1, 0, 0, 0, 0, 29)
 ;
 
 # Queries
