@@ -4,6 +4,8 @@ CREATE TABLE usernames (
   PRIMARY KEY (id)
 );
 
+CREATE UNIQUE INDEX username_index ON usernames (username);
+
 INSERT INTO usernames (username) VALUES
   ('Whynot180'), ('Domlightning')
 ;
@@ -30,6 +32,10 @@ CREATE TABLE primary_weapons (id serial, PRIMARY KEY (id)) INHERITS (weapons);
 CREATE TABLE secondary_weapons (id serial, PRIMARY KEY (id)) INHERITS (weapons);
 CREATE TABLE melee_weapons (id serial, PRIMARY KEY (id)) INHERITS (weapons);
 
+CREATE UNIQUE INDEX p_weapons_index ON primary_weapons (weapon);
+CREATE UNIQUE INDEX s_weapons_index ON secondary_weapons (weapon);
+CREATE UNIQUE INDEX m_weapons_index ON melee_weapons (weapon);
+
 INSERT INTO primary_weapons (weapon) VALUES
   ('L''etranger'), ('Panic Attack'), ('The Bootlegger'),
   ('Stock Scattergun'), ('Tomislav'), ('Crusader''s Crossbow'), 
@@ -51,6 +57,8 @@ CREATE TABLE classes (
   class varchar,
   PRIMARY KEY (id)
 );
+
+CREATE UNIQUE INDEX class_index ON classes (class);
 
 INSERT INTO classes (class) VALUES 
   ('Scout'), ('Soldier'), ('Pyro'),
@@ -82,6 +90,8 @@ CREATE TABLE gamemodes (
   PRIMARY KEY (id)
 );
 
+CREATE UNIQUE INDEX gamemode_index ON gamemodes (gamemode);
+
 INSERT INTO gamemodes (gamemode) VALUES
   ('King of the Hill'), ('Payload')
 ;
@@ -93,6 +103,8 @@ CREATE TABLE maps (
   CONSTRAINT fk_gamemode_id FOREIGN KEY(gamemode_id) REFERENCES gamemodes(id),
   PRIMARY KEY (id)
 );
+
+CREATE UNIQUE INDEX map_index ON maps (map);
 
 INSERT INTO maps (map, gamemode_id) VALUES
   ('Harvest', 1), ('Thunder Mountain', 2), ('Bread Space', 2), 
@@ -186,13 +198,13 @@ INSERT INTO session_data (session_id, map_id, loadout_id, match_statistics_id) V
 
 CREATE FUNCTION weighted_avg_accum(
   "Previous" numeric[],
-  "ThisData" numeric,
-  "ThisWeight" numeric)
+  "Thisdata" numeric,
+  "Thisweight" numeric)
   RETURNS numeric[] 
   LANGUAGE plpgsql
   AS '
     BEGIN
-      RETURN ARRAY["Previous"[1] + ("ThisData" * "ThisWeight"), "Previous"[2] + "ThisWeight"];
+      RETURN ARRAY["Previous"[1] + ("Thisdata" * "Thisweight"), "Previous"[2] + "Thisweight"];
     END;
   '
 ;
@@ -369,15 +381,52 @@ INSERT INTO joined_session_data (username, day, gamemode, map, class, primary_we
 
 # Queries
 
-# Shows the weighted average kills per day based on total rounds played that day
-# Can be used to show the general physical performance (reaction time, aim, etc.) of people on one day
-# It uses a weighted average because each match may have a different amount of rounds, and the more there are the more kills that are possible
-select day, weighted_avg(kills, rounds) as w_avg_kills from joined_session_data
-group by day
-order by w_avg_kills desc;
-
 # Shows the weighted average points of each player
-# Points show general performance and this can therefore be used to show the relative performance of players (although this is not perfect and some matches may include different levels of skills in the enemy and ally team)
-select username, weighted_avg(points, rounds) as w_avg_points from joined_session_data
+/*
+  Points show general performance of a player in a match and this can therefore be used to show the 
+  overall performance of a player (although this is not perfect and some matches 
+  may include different levels of skills in the enemy and ally team)
+*/
+select username, weighted_avg(points, (1/rounds::NUMERIC)) as w_avg_points from joined_session_data
 group by username
 order by w_avg_points desc;
+
+# Shows the overall performance throughout a session
+# Uses weighted avg to show overall performance per match.
+# Uses manual standard deviation (to account for weighted avg) to show outliers.
+/*
+  This can be show how a person improves (or worsens) throughout a session.
+  For example, this could be used to show that people might have a sort of "warm up" and improve, or they may become more frustrated and worsen.
+*/
+select match.match, weighted_avg(statistics.points, (1/match.rounds::NUMERIC)) as w_avg_points, 
+sqrt(sum(power(statistics.points - (
+  select weighted_avg(statistics.points, (1/match.rounds::NUMERIC)) from match_statistics
+  join match on match_statistics.match_id = match.id
+  join statistics on match_statistics.statistics_id = statistics.id), 2))/count(statistics.points)) as stddev from match_statistics
+join match on match_statistics.match_id = match.id
+join statistics on match_statistics.statistics_id = statistics.id
+group by match
+order by match asc;
+
+# Shows the weighted average kills per primary weapon of the scout
+/*
+  This can be used to show how effective a weapon is. This doesn't apply to every 
+  scenario, however. This is because some weapons have special abilities or buffs,
+  but it can help decide which weapon to pick if a player chooses to go for pure damage, 
+  like one might do in Mann vs. Machine mode where hoardes of enemies and "boss" 
+  enemies with large hp pools are involved.
+*/
+select primary_weapon, weighted_avg(damage, (1/rounds::NUMERIC)) as w_avg_damage 
+from joined_session_data
+where class = 'Scout'
+group by primary_weapon
+order by w_avg_damage desc;
+
+# Shows the most played class per player
+/*
+  This can be used to find which class a player plays the most. This can be used to
+  make assumptions on other statistics, such as how playing medic the most would 
+  result in a much higher healing stat than other players.
+*/
+select username, mode() within group (order by class) as most_played_class from joined_session_data
+group by username;
